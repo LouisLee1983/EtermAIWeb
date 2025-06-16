@@ -39,7 +39,7 @@ echo "当前提交: $CURRENT_COMMIT"
 echo "正在从 GitHub 拉取最新代码..."
 for i in {1..3}; do
     echo "尝试 $i/3..."
-    if git fetch origin --timeout=300; then
+    if timeout 300 git fetch origin; then
         echo "✅ 代码拉取成功"
         break
     else

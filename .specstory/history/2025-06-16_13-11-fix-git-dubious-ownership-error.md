@@ -83,9 +83,148 @@ _**Assistant**_
 
 ---
 
+```diff
+  echo "🔐 配置 Git 安全设置..."
+  git config --global --add safe.directory $PROJECT_DIR
++ 
++ # 配置 Git 网络优化
++ echo "🌐 配置网络优化..."
++ git config --global http.lowSpeedLimit 1000
++ git config --global http.lowSpeedTime 600
++ git config --global http.timeout 600
++ git config --global http.postBuffer 524288000
+  
+  echo "📥 同步最新代码..."
+```
+
+```diff
+  echo "当前提交: $CURRENT_COMMIT"
+  
+- # 拉取最新代码
+- git fetch origin
++ # 拉取最新代码 (带重试机制)
++ echo "正在从 GitHub 拉取最新代码..."
++ for i in {1..3}; do
++     echo "尝试 $i/3..."
++     if git fetch origin --timeout=300; then
++         echo "✅ 代码拉取成功"
++         break
++     else
++         if [ $i -eq 3 ]; then
++             echo "❌ 代码拉取失败，已重试 3 次"
++             echo "💡 建议检查网络连接或稍后重试"
++             exit 1
++         fi
++         echo "⚠️  拉取失败，等待 5 秒后重试..."
++         sleep 5
++     fi
++ done
++ 
+  git reset --hard origin/main
+  
+```
+
+---
+
+现在脚本已经优化了！我添加了以下改进：
+
+**网络优化配置：**
+- 增加了超时时间到 600 秒
+- 设置了缓冲区大小
+- 配置了低速传输限制
+
+**重试机制：**
+- 自动重试 3 次
+- 每次失败后等待 5 秒
+- 为每次 fetch 操作设置 300 秒超时
+
+**现在请重新运行脚本：**
+```bash
+sudo bash deploy/update-code.sh
+```
+
+**如果仍然遇到网络问题，您也可以手动执行以下步骤：**
+```bash
+# 首先配置网络优化
+git config --global http.timeout 600
+git config --global http.postBuffer 524288000
+
+# 然后手动拉取代码
+git fetch origin --timeout=300
+git reset --hard origin/main
+```
+
+这些优化应该能够解决 GitHub 连接不稳定的问题。
+
+---
+
+_**User**_
+
+拉取失败，等待 5 秒后重试...
+尝试 3/3...
+error: unknown option `timeout=300'
+usage: git fetch [<options>] [<repository> [<refspec>...]]
+   or: git fetch [<options>] <group>
+   or: git fetch --multiple [<options>] [(<repository> | <group>)...]
+   or: git fetch --all [<options>]
+
+    -v, --[no-]verbose    be more verbose
+    -q, --[no-]quiet      be more quiet
+    --[no-]all            fetch from all remotes
+    --[no-]set-upstream   set upstream for git pull/fetch
+    -a, --[no-]append     append to .git/FETCH_HEAD instead of overwriting
+    --[no-]atomic         use atomic transaction to update references
+    --[no-]upload-pack <path>
+                          path to upload pack on remote end
+    -f, --[no-]force      force overwrite of local reference
+    -m, --[no-]multiple   fetch from multiple remotes
+    -t, --[no-]tags       fetch all tags and associated objects
+    -n                    do not fetch all tags (--no-tags)
+    -j, --[no-]jobs <n>   number of submodules fetched in parallel
+    --[no-]prefetch       modify the refspec to place all refs within refs/prefetch/
+    -p, --[no-]prune      prune remote-tracking branches no longer on remote
+    -P, --[no-]prune-tags prune local tags no longer on remote and clobber changed tags
+    --[no-]recurse-submodules[=<on-demand>]
+                          control recursive fetching of submodules
+    --[no-]dry-run        dry run
+    --[no-]porcelain      machine-readable output
+    --[no-]write-fetch-head
+                          write fetched references to the FETCH_HEAD file
+    -k, --[no-]keep       keep downloaded pack
+    -u, --[no-]update-head-ok
+                          allow updating of HEAD ref
+    --[no-]progress       force progress reporting
+    --[no-]depth <depth>  deepen history of shallow clone
+    --[no-]shallow-since <time>
+                          deepen history of shallow repository based on time
+    --[no-]shallow-exclude <revision>
+                          deepen history of shallow clone, excluding rev
+    --[no-]deepen <n>     deepen history of shallow clone
+    --unshallow           convert to a complete repository
+    --refetch             re-fetch without negotiating common commits
+    --[no-]update-shallow accept refs that update .git/shallow
+    --refmap <refmap>     specify fetch refmap
+    -o, --[no-]server-option <server-specific>
+                          option to transmit
+    -4, --ipv4            use IPv4 addresses only
+    -6, --ipv6            use IPv6 addresses only
+    --[no-]negotiation-tip <revision>
+                          report that we have only objects reachable from this object
+    --[no-]negotiate-only do not fetch a packfile; instead, print ancestors of negotiation tips
+    --[no-]filter <args>  object filtering
+    --[no-]auto-maintenance
+                          run 'maintenance --auto' after fetching
+    --[no-]auto-gc        run 'maintenance --auto' after fetching
+    --[no-]show-forced-updates
+                          check for forced-updates on all updated branches
+    --[no-]write-commit-graph
+                          write the commit-graph after fetching
+    --[no-]stdin          accept refspecs from stdin
 
 
 ---
+
+_**Assistant**_
 
 
 
