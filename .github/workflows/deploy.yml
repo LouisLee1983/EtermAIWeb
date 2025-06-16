@@ -57,19 +57,60 @@ jobs:
           git fetch origin
           git reset --hard origin/main
           
-          # 停止现有容器
-          docker-compose down || echo "没有运行的容器"
+          # 智能部署策略：检查是否需要重新构建
+          NEED_REBUILD=false
           
-          # 备份Redis数据（数据库使用外部PostgreSQL）
-          echo "备份Redis数据..."
-          mkdir -p backup
-          docker run --rm -v etermaiweb_redis_data:/data -v $(pwd)/backup:/backup alpine tar czf /backup/redis_backup_$(date +%Y%m%d_%H%M%S).tar.gz -C /data . || echo "Redis备份失败，可能是首次部署"
+          # 检查关键Docker文件是否有变化
+          if git diff HEAD~1 HEAD --name-only | grep -E "(Dockerfile|requirements\.txt|docker-compose\.yml)" > /dev/null; then
+            echo "🔨 检测到Docker配置文件变化，需要重新构建"
+            NEED_REBUILD=true
+          fi
           
-          # 清理未使用的Docker资源
-          docker system prune -f || echo "清理失败"
+          # 检查容器是否正在运行
+          if ! docker-compose ps | grep -q "Up"; then
+            echo "🔨 检测到容器未运行，需要启动"
+            NEED_REBUILD=true
+          fi
           
-          # 构建并启动新容器
-          docker-compose up -d --build
+          if [ "$NEED_REBUILD" = true ]; then
+            echo "🔨 执行完整构建部署..."
+            
+            # 停止现有容器
+            docker-compose down || echo "没有运行的容器"
+            
+            # 备份Redis数据
+            echo "备份Redis数据..."
+            mkdir -p backup
+            docker run --rm -v etermaiweb_redis_data:/data -v $(pwd)/backup:/backup alpine tar czf /backup/redis_backup_$(date +%Y%m%d_%H%M%S).tar.gz -C /data . || echo "Redis备份失败"
+            
+            # 清理Docker缓存
+            docker system prune -f || echo "清理失败"
+            
+            # 构建并启动
+            docker-compose up -d --build
+            
+          else
+            echo "⚡ 执行快速代码更新..."
+            
+            # 优化策略：只重新构建应用容器，复用Redis
+            echo "停止应用容器（保持Redis运行）..."
+            docker-compose stop app
+            
+            # 使用缓存快速重新构建应用容器
+            echo "快速重新构建应用容器（利用Docker缓存）..."
+            docker-compose build app
+            
+            # 启动应用容器
+            echo "启动更新后的应用容器..."
+            docker-compose up -d app
+            
+            # 如果失败，尝试完整重启
+            if [ $? -ne 0 ]; then
+              echo "快速更新失败，执行完整重启..."
+              docker-compose down
+              docker-compose up -d --build
+            fi
+          fi
           
           # 等待服务启动
           echo "等待服务启动..."
