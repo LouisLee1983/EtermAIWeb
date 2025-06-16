@@ -30,7 +30,7 @@ jobs:
           echo ""
           
           # 执行代码同步脚本
-          sudo /www/wwwroot/etermaiweb/deploy/update-code.sh
+          sudo bash /www/wwwroot/etermaiweb/deploy/update-code.sh
           
           echo ""
           echo "✅ 代码同步完成！"
