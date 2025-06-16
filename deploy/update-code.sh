@@ -22,14 +22,37 @@ cd $PROJECT_DIR || { echo "❌ 无法进入项目目录"; exit 1; }
 echo "🔐 配置 Git 安全设置..."
 git config --global --add safe.directory $PROJECT_DIR
 
+# 配置 Git 网络优化
+echo "🌐 配置网络优化..."
+git config --global http.lowSpeedLimit 1000
+git config --global http.lowSpeedTime 600
+git config --global http.timeout 600
+git config --global http.postBuffer 524288000
+
 echo "📥 同步最新代码..."
 
 # 保存当前分支和提交信息
 CURRENT_COMMIT=$(git rev-parse HEAD)
 echo "当前提交: $CURRENT_COMMIT"
 
-# 拉取最新代码
-git fetch origin
+# 拉取最新代码 (带重试机制)
+echo "正在从 GitHub 拉取最新代码..."
+for i in {1..3}; do
+    echo "尝试 $i/3..."
+    if git fetch origin --timeout=300; then
+        echo "✅ 代码拉取成功"
+        break
+    else
+        if [ $i -eq 3 ]; then
+            echo "❌ 代码拉取失败，已重试 3 次"
+            echo "💡 建议检查网络连接或稍后重试"
+            exit 1
+        fi
+        echo "⚠️  拉取失败，等待 5 秒后重试..."
+        sleep 5
+    fi
+done
+
 git reset --hard origin/main
 
 # 获取新的提交信息

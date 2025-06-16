@@ -62,3 +62,32 @@ sudo bash deploy/update-code.sh
 
 ---
 
+_**User**_
+
+root@i-bp197psrlmzk7ws6kjx2:/www/wwwroot/etermaiweb# sudo bash deploy/update-code.sh 
+=== EtermAIWeb 代码同步脚本 (宝塔面板版本) ===
+📥 同步最新代码...
+当前提交: d5ee9c15d2131ef2d4b12a2410eeb1374f1418ba
+fatal: unable to access 'https://github.com/LouisLee1983/EtermAIWeb.git/': GnuTLS recv error (-110): The TLS connection was non-properly terminated.
+
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+看到您遇到了网络连接问题。这是 GitHub 连接不稳定导致的，让我为脚本添加重试机制和网络优化配置：
+
+---
+
+
+
+---
+
+
+
+---
+
