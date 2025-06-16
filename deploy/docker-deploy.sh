@@ -60,36 +60,47 @@ cd $PROJECT_DIR
 # 检查PostgreSQL服务
 echo "检查PostgreSQL服务..."
 
-# 尝试检测PostgreSQL服务名称
-PG_SERVICE=""
-for service in postgresql postgresql.service postgresql-14 postgresql-13 postgresql-12 postgresql-15; do
-    if systemctl list-units --full -all | grep -Fq "$service"; then
-        PG_SERVICE="$service"
-        break
+# 检查PostgreSQL进程是否运行
+if pgrep -f postgres > /dev/null; then
+    echo "✅ PostgreSQL进程正在运行"
+    
+    # 检查端口是否监听
+    if netstat -tlnp 2>/dev/null | grep :5432 > /dev/null || ss -tlnp 2>/dev/null | grep :5432 > /dev/null; then
+        echo "✅ PostgreSQL在端口5432上监听"
+    else
+        echo "❌ PostgreSQL端口5432未监听"
+        exit 1
     fi
-done
+else
+    echo "❌ PostgreSQL进程未运行"
+    
+    # 尝试检测PostgreSQL服务名称
+    PG_SERVICE=""
+    for service in postgresql postgresql.service postgresql-14 postgresql-13 postgresql-12 postgresql-15; do
+        if systemctl list-units --full -all | grep -Fq "$service"; then
+            PG_SERVICE="$service"
+            break
+        fi
+    done
 
-if [ -n "$PG_SERVICE" ]; then
-    echo "检测到PostgreSQL服务: $PG_SERVICE"
-    if ! systemctl is-active --quiet $PG_SERVICE; then
-        echo "❌ PostgreSQL服务未运行，尝试启动..."
+    if [ -n "$PG_SERVICE" ]; then
+        echo "检测到PostgreSQL服务: $PG_SERVICE"
+        echo "尝试启动PostgreSQL服务..."
         systemctl start $PG_SERVICE
         if ! systemctl is-active --quiet $PG_SERVICE; then
             echo "❌ PostgreSQL服务启动失败"
             exit 1
         fi
+        echo "✅ PostgreSQL服务启动成功"
+    else
+        echo "❌ 未检测到PostgreSQL systemd服务"
+        echo "请手动启动PostgreSQL或检查安装状态"
+        exit 1
     fi
-    echo "✅ PostgreSQL服务正在运行"
-else
-    echo "⚠️  未检测到PostgreSQL systemd服务，尝试直接连接数据库..."
-    # 直接测试数据库连接，而不依赖systemd服务
 fi
 
 # 检查数据库连接和创建数据库
 echo "检查数据库连接..."
-DB_NAME="etermaiweb"
-DB_USER="postgres" 
-DB_PASSWORD="Postgre,.1"
 
 # 先测试基本的数据库连接
 echo "测试PostgreSQL是否可访问..."
@@ -146,17 +157,39 @@ fi
 echo "检查PostgreSQL配置..."
 
 # 尝试获取PostgreSQL版本和配置文件路径
-if sudo -u postgres psql -t -c "SELECT version();" > /dev/null 2>&1; then
-    PG_VERSION=$(sudo -u postgres psql -t -c "SELECT version();" | grep -oP 'PostgreSQL \K[0-9]+' || echo "")
+DB_NAME="etermaiweb"
+DB_USER="postgres" 
+DB_PASSWORD="Postgre,.1"
+
+# 使用密码连接获取版本信息（因为sudo -u postgres可能不工作）
+if PGPASSWORD=$DB_PASSWORD psql -h localhost -U $DB_USER -t -c "SELECT version();" > /dev/null 2>&1; then
+    PG_VERSION=$(PGPASSWORD=$DB_PASSWORD psql -h localhost -U $DB_USER -t -c "SELECT version();" | grep -oP 'PostgreSQL \K[0-9]+' || echo "")
     
     if [ -n "$PG_VERSION" ]; then
-        PG_CONF="/etc/postgresql/$PG_VERSION/main/postgresql.conf"
-        PG_HBA="/etc/postgresql/$PG_VERSION/main/pg_hba.conf"
-        
         echo "检测到PostgreSQL版本: $PG_VERSION"
         
+        # 检查多个可能的配置文件路径
+        PG_CONF=""
+        PG_HBA=""
+        
+        # 标准路径
+        if [ -f "/etc/postgresql/$PG_VERSION/main/postgresql.conf" ]; then
+            PG_CONF="/etc/postgresql/$PG_VERSION/main/postgresql.conf"
+            PG_HBA="/etc/postgresql/$PG_VERSION/main/pg_hba.conf"
+        # 宝塔路径
+        elif [ -f "/www/server/pgsql/data/postgresql.conf" ]; then
+            PG_CONF="/www/server/pgsql/data/postgresql.conf"
+            PG_HBA="/www/server/pgsql/data/pg_hba.conf"
+        # 其他可能路径
+        elif [ -f "/var/lib/postgresql/data/postgresql.conf" ]; then
+            PG_CONF="/var/lib/postgresql/data/postgresql.conf"
+            PG_HBA="/var/lib/postgresql/data/pg_hba.conf"
+        fi
+        
         # 检查配置文件是否存在
-        if [ -f "$PG_CONF" ] && [ -f "$PG_HBA" ]; then
+        if [ -n "$PG_CONF" ] && [ -f "$PG_CONF" ] && [ -f "$PG_HBA" ]; then
+            echo "找到PostgreSQL配置文件: $PG_CONF"
+            
             # 确保PostgreSQL监听所有地址
             if ! grep -q "listen_addresses = '\*'" $PG_CONF; then
                 echo "配置PostgreSQL监听地址..."
@@ -171,17 +204,19 @@ if sudo -u postgres psql -t -c "SELECT version();" > /dev/null 2>&1; then
                 echo "host    all             all             172.17.0.0/16           md5" >> $PG_HBA
                 echo "✅ PostgreSQL Docker网络权限已配置"
                 
-                # 重启PostgreSQL使配置生效
+                # 重启PostgreSQL（宝塔安装的可能需要特殊重启方式）
                 if [ -n "$PG_SERVICE" ]; then
                     echo "重启PostgreSQL服务..."
                     systemctl restart $PG_SERVICE
                     sleep 5
                     echo "✅ PostgreSQL服务重启完成"
+                else
+                    echo "⚠️  无法重启PostgreSQL，请手动重启以使配置生效"
                 fi
             fi
         else
             echo "⚠️  未找到PostgreSQL配置文件，跳过自动配置"
-            echo "请手动配置PostgreSQL允许Docker连接"
+            echo "PostgreSQL可能已经配置为监听所有地址"
         fi
     else
         echo "⚠️  无法检测PostgreSQL版本，跳过自动配置"
