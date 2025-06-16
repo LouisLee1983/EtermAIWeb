@@ -49,6 +49,15 @@ python manage.py db upgrade
 python app.py
 ```
 
+## 自动部署
+
+本项目已配置GitHub Actions自动部署到云服务器47.111.119.238：
+
+- **快速部署**: 查看 [快速部署指南](docs/快速部署指南.md)
+- **详细配置**: 查看 [GitHub自动部署配置文档](docs/GitHub自动部署配置文档.md)
+
+每当代码合并到main分支时，系统会自动部署到生产服务器。
+
 ## 项目文档
 
 详细的项目文档位于 `docs/` 目录：
@@ -57,6 +66,8 @@ python app.py
 - [数据库设计概要](docs/数据库设计概要.md)
 - [接口设计概要](docs/接口设计概要.md)
 - [角色与权限设计](docs/角色与权限设计.md)
+- [GitHub自动部署配置文档](docs/GitHub自动部署配置文档.md)
+- [快速部署指南](docs/快速部署指南.md)
 
 ## 许可证
 
