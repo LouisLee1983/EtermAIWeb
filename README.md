@@ -44,7 +44,7 @@ cd EtermAIWeb
 docker-compose up -d --build
 
 # 访问应用
-http://localhost
+http://localhost:5000
 ```
 
 ### 🛠️ 传统部署

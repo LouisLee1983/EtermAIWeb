@@ -13,15 +13,17 @@ GitHub仓库 → GitHub Actions → 云服务器Docker环境
                 ↓
     ┌─────────────────────────────────────┐
     │         Docker容器环境              │
-    │  ┌─────────┐  ┌─────────┐          │
-    │  │  Nginx  │  │  Flask  │          │
-    │  │ 容器:80 │  │ 容器:5000│          │
-    │  └─────────┘  └─────────┘          │
+    │                                     │
+    │            ┌─────────┐              │
+    │            │  Flask  │              │
+    │            │ 容器:5000│              │
+    │            └─────────┘              │
     │  ┌─────────┐  ┌─────────┐          │
     │  │PostgreSQL│ │  Redis  │          │
     │  │ 容器:5432│  │ 容器:6379│          │
     │  └─────────┘  └─────────┘          │
     └─────────────────────────────────────┘
+          直接访问 IP:5000
 ```
 
 ## 🚀 快速部署
@@ -79,7 +81,7 @@ docker-compose ps
 docker-compose ps
 
 # 检查应用健康状态
-curl http://localhost/api/health
+curl http://localhost:5000/api/health
 
 # 查看日志
 docker-compose logs -f
@@ -93,12 +95,7 @@ docker-compose logs -f
 - **依赖**: PostgreSQL、Redis
 - **健康检查**: `/api/health`
 
-### 2. Nginx代理容器 (etermaiweb-nginx)
-- **端口**: 80, 443
-- **功能**: 反向代理、负载均衡、静态文件服务
-- **配置文件**: `nginx/conf.d/default.conf`
-
-### 3. PostgreSQL数据库容器 (etermaiweb-db)
+### 2. PostgreSQL数据库容器 (etermaiweb-db)
 - **端口**: 5432
 - **功能**: 数据存储
 - **数据卷**: `postgres_data`
@@ -107,7 +104,7 @@ docker-compose logs -f
   - 用户: `postgres`
   - 密码: `password`
 
-### 4. Redis缓存容器 (etermaiweb-redis)
+### 3. Redis缓存容器 (etermaiweb-redis)
 - **端口**: 6379
 - **功能**: 缓存、会话存储
 - **数据卷**: `redis_data`
@@ -189,12 +186,11 @@ docker-compose logs -f
 
 # 查看特定服务日志
 docker-compose logs -f app
-docker-compose logs -f nginx
 docker-compose logs -f db
+docker-compose logs -f redis
 
-# 查看实时日志
-tail -f logs/nginx/access.log
-tail -f logs/nginx/error.log
+# 查看实时应用日志
+tail -f logs/app.log
 ```
 
 ### 性能监控
@@ -216,7 +212,6 @@ free -h
 docker-compose logs [容器名]
 
 # 检查端口占用
-netstat -tlnp | grep :80
 netstat -tlnp | grep :5000
 
 # 重新构建镜像
@@ -230,8 +225,8 @@ docker-compose up -d
 ufw status
 iptables -L
 
-# 检查Nginx配置
-docker exec etermaiweb-nginx nginx -t
+# 检查Flask应用状态
+docker exec etermaiweb-app curl -f http://localhost:5000/api/health
 
 # 检查网络连接
 docker network ls
@@ -271,18 +266,13 @@ REDIS_PASSWORD=your_redis_password
 ### 2. 防火墙配置
 ```bash
 # 只开放必要端口
-ufw allow 22    # SSH
-ufw allow 80    # HTTP
-ufw allow 443   # HTTPS
+ufw allow 22      # SSH
+ufw allow 5000    # Flask应用
 ufw enable
 ```
 
-### 3. SSL证书配置
-```bash
-# 使用Let's Encrypt
-apt install certbot
-certbot --nginx -d 47.111.119.238
-```
+### 3. SSL证书配置 (可选)
+如果需要HTTPS访问，可以使用Nginx反向代理并配置SSL证书。
 
 ## 📈 扩展配置
 

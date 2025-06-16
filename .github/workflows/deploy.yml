@@ -87,7 +87,7 @@ jobs:
           max_attempts=10
           attempt=1
           while [ $attempt -le $max_attempts ]; do
-            if curl -f http://localhost/api/health > /dev/null 2>&1; then
+            if curl -f http://localhost:5000/api/health > /dev/null 2>&1; then
               echo "✅ 应用健康检查通过"
               break
             else

@@ -93,7 +93,7 @@ max_attempts=10
 attempt=1
 
 while [ $attempt -le $max_attempts ]; do
-    if curl -f http://localhost/api/health > /dev/null 2>&1; then
+    if curl -f http://localhost:5000/api/health > /dev/null 2>&1; then
         echo "✅ 应用健康检查通过"
         break
     else
@@ -113,8 +113,8 @@ fi
 echo ""
 echo "🎉 部署完成！"
 echo "============================================"
-echo "访问地址: http://47.111.119.238"
-echo "健康检查: http://47.111.119.238/api/health"
+echo "访问地址: http://47.111.119.238:5000"
+echo "健康检查: http://47.111.119.238:5000/api/health"
 echo "============================================"
 echo ""
 echo "📋 容器状态:"

@@ -37,11 +37,8 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - etermaiweb-network
-    ports:
-      - "5432:5432"
 
   # Redis缓存
   redis:
@@ -53,10 +50,6 @@ services:
       - redis_data:/data
     networks:
       - etermaiweb-network
-    ports:
-      - "6379:6379"
-
-
 
 volumes:
   postgres_data:
