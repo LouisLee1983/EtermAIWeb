@@ -59,15 +59,31 @@ cd $PROJECT_DIR
 
 # 检查PostgreSQL服务
 echo "检查PostgreSQL服务..."
-if ! systemctl is-active --quiet postgresql; then
-    echo "❌ PostgreSQL服务未运行，尝试启动..."
-    systemctl start postgresql
-    if ! systemctl is-active --quiet postgresql; then
-        echo "❌ PostgreSQL服务启动失败，请检查PostgreSQL安装"
-        exit 1
+
+# 尝试检测PostgreSQL服务名称
+PG_SERVICE=""
+for service in postgresql postgresql.service postgresql-14 postgresql-13 postgresql-12 postgresql-15; do
+    if systemctl list-units --full -all | grep -Fq "$service"; then
+        PG_SERVICE="$service"
+        break
     fi
+done
+
+if [ -n "$PG_SERVICE" ]; then
+    echo "检测到PostgreSQL服务: $PG_SERVICE"
+    if ! systemctl is-active --quiet $PG_SERVICE; then
+        echo "❌ PostgreSQL服务未运行，尝试启动..."
+        systemctl start $PG_SERVICE
+        if ! systemctl is-active --quiet $PG_SERVICE; then
+            echo "❌ PostgreSQL服务启动失败"
+            exit 1
+        fi
+    fi
+    echo "✅ PostgreSQL服务正在运行"
+else
+    echo "⚠️  未检测到PostgreSQL systemd服务，尝试直接连接数据库..."
+    # 直接测试数据库连接，而不依赖systemd服务
 fi
-echo "✅ PostgreSQL服务正在运行"
 
 # 检查数据库连接和创建数据库
 echo "检查数据库连接..."
@@ -75,39 +91,103 @@ DB_NAME="etermaiweb"
 DB_USER="postgres" 
 DB_PASSWORD="Postgre,.1"
 
-# 检查数据库是否存在，如果不存在则创建
-if ! sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
-    echo "数据库 $DB_NAME 不存在，正在创建..."
-    sudo -u postgres createdb $DB_NAME
-    echo "✅ 数据库 $DB_NAME 创建成功"
+# 先测试基本的数据库连接
+echo "测试PostgreSQL是否可访问..."
+if command -v psql > /dev/null 2>&1; then
+    echo "✅ psql命令可用"
+    
+    # 尝试多种方式连接数据库
+    CONNECTED=false
+    
+    # 方式1: 使用postgres用户直接连接
+    if sudo -u postgres psql -c "\l" > /dev/null 2>&1; then
+        echo "✅ 使用postgres用户连接成功"
+        CONNECTED=true
+        
+        # 检查数据库是否存在，如果不存在则创建
+        if ! sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
+            echo "数据库 $DB_NAME 不存在，正在创建..."
+            sudo -u postgres createdb $DB_NAME
+            echo "✅ 数据库 $DB_NAME 创建成功"
+        else
+            echo "✅ 数据库 $DB_NAME 已存在"
+        fi
+        
+        # 设置postgres用户密码（如果需要）
+        sudo -u postgres psql -c "ALTER USER postgres PASSWORD '$DB_PASSWORD';" 2>/dev/null || echo "⚠️  postgres用户密码可能已设置"
+        
+    # 方式2: 使用密码连接
+    elif PGPASSWORD=$DB_PASSWORD psql -h localhost -U $DB_USER -c "\l" > /dev/null 2>&1; then
+        echo "✅ 使用密码连接成功"
+        CONNECTED=true
+        
+    # 方式3: 尝试其他连接方式
+    elif psql -h localhost -U $DB_USER -c "\l" > /dev/null 2>&1; then
+        echo "✅ 无密码连接成功"
+        CONNECTED=true
+    fi
+    
+    if [ "$CONNECTED" = false ]; then
+        echo "❌ 无法连接PostgreSQL数据库"
+        echo "请检查："
+        echo "1. PostgreSQL是否正确安装"
+        echo "2. PostgreSQL服务是否运行"
+        echo "3. postgres用户是否存在"
+        echo "4. 数据库权限配置是否正确"
+        exit 1
+    fi
 else
-    echo "✅ 数据库 $DB_NAME 已存在"
+    echo "❌ psql命令不可用，请确认PostgreSQL客户端已安装"
+    echo "安装命令: apt-get install postgresql-client"
+    exit 1
 fi
 
 # 检查PostgreSQL配置是否允许Docker连接
 echo "检查PostgreSQL配置..."
-PG_VERSION=$(sudo -u postgres psql -t -c "SELECT version();" | grep -oP 'PostgreSQL \K[0-9]+')
-PG_CONF="/etc/postgresql/$PG_VERSION/main/postgresql.conf"
-PG_HBA="/etc/postgresql/$PG_VERSION/main/pg_hba.conf"
 
-# 确保PostgreSQL监听所有地址
-if ! grep -q "listen_addresses = '\*'" $PG_CONF; then
-    echo "配置PostgreSQL监听地址..."
-    sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" $PG_CONF
-    echo "✅ PostgreSQL监听地址已配置"
-fi
-
-# 确保Docker网络可以连接
-if ! grep -q "172.17.0.0/16" $PG_HBA; then
-    echo "配置PostgreSQL允许Docker网络连接..."
-    echo "host    all             all             172.17.0.0/16           md5" >> $PG_HBA
-    echo "✅ PostgreSQL Docker网络权限已配置"
+# 尝试获取PostgreSQL版本和配置文件路径
+if sudo -u postgres psql -t -c "SELECT version();" > /dev/null 2>&1; then
+    PG_VERSION=$(sudo -u postgres psql -t -c "SELECT version();" | grep -oP 'PostgreSQL \K[0-9]+' || echo "")
     
-    # 重启PostgreSQL使配置生效
-    echo "重启PostgreSQL服务..."
-    systemctl restart postgresql
-    sleep 5
-    echo "✅ PostgreSQL服务重启完成"
+    if [ -n "$PG_VERSION" ]; then
+        PG_CONF="/etc/postgresql/$PG_VERSION/main/postgresql.conf"
+        PG_HBA="/etc/postgresql/$PG_VERSION/main/pg_hba.conf"
+        
+        echo "检测到PostgreSQL版本: $PG_VERSION"
+        
+        # 检查配置文件是否存在
+        if [ -f "$PG_CONF" ] && [ -f "$PG_HBA" ]; then
+            # 确保PostgreSQL监听所有地址
+            if ! grep -q "listen_addresses = '\*'" $PG_CONF; then
+                echo "配置PostgreSQL监听地址..."
+                sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" $PG_CONF
+                sed -i "s/listen_addresses = 'localhost'/listen_addresses = '*'/" $PG_CONF
+                echo "✅ PostgreSQL监听地址已配置"
+            fi
+            
+            # 确保Docker网络可以连接
+            if ! grep -q "172.17.0.0/16" $PG_HBA; then
+                echo "配置PostgreSQL允许Docker网络连接..."
+                echo "host    all             all             172.17.0.0/16           md5" >> $PG_HBA
+                echo "✅ PostgreSQL Docker网络权限已配置"
+                
+                # 重启PostgreSQL使配置生效
+                if [ -n "$PG_SERVICE" ]; then
+                    echo "重启PostgreSQL服务..."
+                    systemctl restart $PG_SERVICE
+                    sleep 5
+                    echo "✅ PostgreSQL服务重启完成"
+                fi
+            fi
+        else
+            echo "⚠️  未找到PostgreSQL配置文件，跳过自动配置"
+            echo "请手动配置PostgreSQL允许Docker连接"
+        fi
+    else
+        echo "⚠️  无法检测PostgreSQL版本，跳过自动配置"
+    fi
+else
+    echo "⚠️  无法连接数据库检测版本，跳过自动配置"
 fi
 
 # 创建必需的目录

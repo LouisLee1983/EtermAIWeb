@@ -79,15 +79,31 @@ cd $PROJECT_DIR
 
 # 检查PostgreSQL服务
 echo "检查PostgreSQL服务..."
-if ! systemctl is-active --quiet postgresql; then
-    echo "❌ PostgreSQL服务未运行，尝试启动..."
-    systemctl start postgresql
-    if ! systemctl is-active --quiet postgresql; then
-        echo "❌ PostgreSQL服务启动失败，请检查PostgreSQL安装"
-        exit 1
+
+# 尝试检测PostgreSQL服务名称
+PG_SERVICE=""
+for service in postgresql postgresql.service postgresql-14 postgresql-13 postgresql-12 postgresql-15; do
+    if systemctl list-units --full -all | grep -Fq "$service"; then
+        PG_SERVICE="$service"
+        break
     fi
+done
+
+if [ -n "$PG_SERVICE" ]; then
+    echo "检测到PostgreSQL服务: $PG_SERVICE"
+    if ! systemctl is-active --quiet $PG_SERVICE; then
+        echo "❌ PostgreSQL服务未运行，尝试启动..."
+        systemctl start $PG_SERVICE
+        if ! systemctl is-active --quiet $PG_SERVICE; then
+            echo "❌ PostgreSQL服务启动失败"
+            exit 1
+        fi
+    fi
+    echo "✅ PostgreSQL服务正在运行"
+else
+    echo "⚠️  未检测到PostgreSQL systemd服务，尝试直接连接数据库..."
+    # 直接测试数据库连接，而不依赖systemd服务
 fi
-echo "✅ PostgreSQL服务正在运行"
 
 # 检查数据库连接和创建数据库
 echo "检查数据库连接..."
