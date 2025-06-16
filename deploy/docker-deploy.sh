@@ -8,7 +8,7 @@ set -e  # 出错时停止执行
 # 配置变量
 PROJECT_NAME="etermaiweb"
 PROJECT_DIR="/www/wwwroot/etermaiweb"
-REPO_URL="https://github.com/LouisLee1983/EtermAIWeb.git"
+REPO_URL="git@github.com:LouisLee1983/EtermAIWeb.git"
 DOCKER_COMPOSE_VERSION="2.29.2"
 
 echo "=== EtermAIWeb Docker部署脚本 ==="
