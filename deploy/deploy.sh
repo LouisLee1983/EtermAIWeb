@@ -7,7 +7,7 @@ set -e  # 出错时停止执行
 
 # 配置变量
 PROJECT_NAME="etermaiweb"
-PROJECT_DIR="/var/www/etermaiweb"
+PROJECT_DIR="/www/wwwroot/etermaiweb"
 SERVICE_NAME="etermaiweb"
 PYTHON_VERSION="3.10"
 USER="www-data"

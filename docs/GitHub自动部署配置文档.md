@@ -123,7 +123,7 @@ GitHub Actions工作流文件位于：`.github/workflows/deploy.yml`
 
 ### 目录结构：
 ```
-/var/www/etermaiweb/          # 项目根目录
+/www/wwwroot/etermaiweb/      # 项目根目录
 ├── app/                      # Flask应用
 ├── venv/                     # Python虚拟环境
 ├── requirements.txt          # Python依赖
@@ -169,7 +169,7 @@ tail -f /var/log/syslog | grep etermaiweb
 ssh root@47.111.119.238
 
 # 切换到项目目录
-cd /var/www/etermaiweb
+cd /www/wwwroot/etermaiweb
 
 # 拉取最新代码
 sudo git fetch origin
@@ -195,7 +195,7 @@ sudo systemctl restart etermaiweb
 3. **检查服务器权限**：
    ```bash
    # 确保项目目录权限正确
-   sudo chown -R www-data:www-data /var/www/etermaiweb
+   sudo chown -R www-data:www-data /www/wwwroot/etermaiweb
    ```
 
 ### 6.2 服务启动失败
@@ -207,7 +207,7 @@ sudo systemctl restart etermaiweb
 
 2. **检查Python环境**：
    ```bash
-   cd /var/www/etermaiweb
+   cd /www/wwwroot/etermaiweb
    source venv/bin/activate
    python app.py
    ```

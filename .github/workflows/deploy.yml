@@ -51,13 +51,13 @@ jobs:
           echo "开始部署到云服务器..."
           
           # 切换到项目目录
-          cd /var/www/etermaiweb || { echo "项目目录不存在"; exit 1; }
+          cd /www/wwwroot/etermaiweb || { echo "项目目录不存在"; exit 1; }
           
           # 停止服务 (如果正在运行)
           sudo systemctl stop etermaiweb || echo "服务未运行"
           
           # 备份当前版本
-          sudo cp -r /var/www/etermaiweb /var/www/etermaiweb_backup_$(date +%Y%m%d_%H%M%S) || echo "备份失败"
+          sudo cp -r /www/wwwroot/etermaiweb /www/wwwroot/etermaiweb_backup_$(date +%Y%m%d_%H%M%S) || echo "备份失败"
           
           # 拉取最新代码
           sudo git fetch origin
