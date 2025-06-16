@@ -18,6 +18,10 @@ fi
 # 切换到项目目录
 cd $PROJECT_DIR || { echo "❌ 无法进入项目目录"; exit 1; }
 
+# 配置 Git 安全目录，避免权限问题
+echo "🔐 配置 Git 安全设置..."
+git config --global --add safe.directory $PROJECT_DIR
+
 echo "📥 同步最新代码..."
 
 # 保存当前分支和提交信息

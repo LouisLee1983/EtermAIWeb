@@ -97,6 +97,4 @@ python app.py
 - [快速部署指南](docs/快速部署指南.md)
 - [GitHub自动部署配置文档](docs/GitHub自动部署配置文档.md)
 
-## 许可证
-
-MIT License 
+测试同步202506162115
