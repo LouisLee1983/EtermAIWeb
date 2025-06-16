@@ -1,5 +1,5 @@
-# 使用Python 3.10官方镜像作为基础镜像
-FROM python:3.10-slim
+# 使用更轻量的Alpine Linux基础镜像
+FROM python:3.10-alpine
 
 # 设置工作目录
 WORKDIR /app
@@ -10,22 +10,25 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     FLASK_APP=app.py \
     FLASK_ENV=production
 
-# 安装系统依赖
-RUN apt-get update && apt-get install -y \
+# 安装系统依赖（Alpine Linux使用apk）
+RUN apk add --no-cache \
     gcc \
+    musl-dev \
     postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+    curl \
+    && rm -rf /var/cache/apk/*
 
 # 复制requirements文件并安装Python依赖
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt && \
+    pip cache purge
 
 # 复制项目文件
 COPY . .
 
-# 创建非root用户运行应用
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# 创建非root用户运行应用（Alpine方式）
+RUN addgroup -g 1000 appuser && adduser -u 1000 -G appuser -s /bin/sh -D appuser
 RUN chown -R appuser:appuser /app
 USER appuser
 

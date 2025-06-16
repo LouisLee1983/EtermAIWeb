@@ -1,6 +1,7 @@
 # Git相关
 .git
 .gitignore
+.github
 
 # Python相关
 __pycache__
@@ -13,10 +14,12 @@ pip-log.txt
 .venv
 venv/
 .env
+.env.local
+.env.example
 
 # IDE相关
-.vscode
-.idea
+.vscode/
+.idea/
 *.swp
 *.swo
 
@@ -29,6 +32,7 @@ Thumbs.db
 logs/
 
 # 文档
+*.md
 README.md
 docs/
 
@@ -36,6 +40,7 @@ docs/
 tests/
 .pytest_cache/
 .coverage
+test_*
 
 # Docker相关
 Dockerfile
@@ -44,7 +49,6 @@ docker-compose.yml
 
 # 部署相关
 deploy/
-.github/
 
 # 备份文件
 backup/
@@ -56,9 +60,11 @@ npm-debug.log
 
 # 临时文件
 *.tmp
-*.temp
 temp/
 
 # SpecStory相关
 .specstory/
-.cursorindexingignore 
+.cursorindexingignore
+
+# 缓存
+.cache/ 
