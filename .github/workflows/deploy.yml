@@ -60,9 +60,10 @@ jobs:
           # 停止现有容器
           docker-compose down || echo "没有运行的容器"
           
-          # 备份数据（数据库卷）
-          echo "备份数据库数据..."
-          docker run --rm -v etermaiweb_postgres_data:/data -v $(pwd)/backup:/backup alpine tar czf /backup/postgres_backup_$(date +%Y%m%d_%H%M%S).tar.gz -C /data . || echo "备份失败"
+          # 备份Redis数据（数据库使用外部PostgreSQL）
+          echo "备份Redis数据..."
+          mkdir -p backup
+          docker run --rm -v etermaiweb_redis_data:/data -v $(pwd)/backup:/backup alpine tar czf /backup/redis_backup_$(date +%Y%m%d_%H%M%S).tar.gz -C /data . || echo "Redis备份失败，可能是首次部署"
           
           # 清理未使用的Docker资源
           docker system prune -f || echo "清理失败"
