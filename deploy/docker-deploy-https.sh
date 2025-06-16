@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# EtermAIWeb Docker部署脚本
+# EtermAIWeb Docker部署脚本 (HTTPS版本)
 # 用于在云服务器上使用Docker部署项目
 
 set -e  # 出错时停止执行
@@ -8,10 +8,10 @@ set -e  # 出错时停止执行
 # 配置变量
 PROJECT_NAME="etermaiweb"
 PROJECT_DIR="/www/wwwroot/etermaiweb"
-REPO_URL="git@github.com:LouisLee1983/EtermAIWeb.git"
+REPO_URL="https://github.com/LouisLee1983/EtermAIWeb.git"
 DOCKER_COMPOSE_VERSION="2.29.2"
 
-echo "=== EtermAIWeb Docker部署脚本 ==="
+echo "=== EtermAIWeb Docker部署脚本 (HTTPS版本) ==="
 echo "项目目录: $PROJECT_DIR"
 echo "使用Docker Compose进行部署"
 
@@ -38,6 +38,12 @@ fi
 echo "✅ Docker版本: $(docker --version)"
 echo "✅ Docker Compose版本: $(docker-compose --version)"
 
+# 配置Git缓冲区（解决网络问题）
+echo "配置Git网络优化..."
+git config --global http.postBuffer 524288000
+git config --global http.lowSpeedLimit 0
+git config --global http.lowSpeedTime 999999
+
 # 创建项目目录
 if [ ! -d "$PROJECT_DIR" ]; then
     echo "创建项目目录..."
@@ -47,11 +53,25 @@ fi
 # 克隆或更新代码
 if [ ! -d "$PROJECT_DIR/.git" ]; then
     echo "克隆项目代码..."
-    git clone $REPO_URL $PROJECT_DIR
+    # 尝试多次克隆，增加重试机制
+    for i in {1..3}; do
+        echo "尝试克隆 (第${i}次)..."
+        if git clone --depth 1 $REPO_URL $PROJECT_DIR; then
+            echo "✅ 克隆成功"
+            break
+        else
+            echo "❌ 克隆失败，等待重试..."
+            sleep 5
+            if [ $i -eq 3 ]; then
+                echo "❌ 克隆失败，请检查网络连接或使用SSH方式"
+                exit 1
+            fi
+        fi
+    done
 else
     echo "更新项目代码..."
     cd $PROJECT_DIR
-    git fetch origin
+    git fetch origin --depth 1
     git reset --hard origin/main
 fi
 
