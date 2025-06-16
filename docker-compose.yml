@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # Flask应用
+  app:
+    build: .
+    container_name: etermaiweb-app
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://postgres:password@db:5432/etermaiweb
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - etermaiweb-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL数据库
+  db:
+    image: postgres:15-alpine
+    container_name: etermaiweb-db
+    restart: always
+    environment:
+      POSTGRES_DB: etermaiweb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - etermaiweb-network
+    ports:
+      - "5432:5432"
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    container_name: etermaiweb-redis
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - etermaiweb-network
+    ports:
+      - "6379:6379"
+
+  # Nginx反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: etermaiweb-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - app
+    networks:
+      - etermaiweb-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  etermaiweb-network:
+    driver: bridge 

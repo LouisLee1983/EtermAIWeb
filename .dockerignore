@@ -1,0 +1,64 @@
+# Git相关
+.git
+.gitignore
+
+# Python相关
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+pip-log.txt
+.venv
+venv/
+.env
+
+# IDE相关
+.vscode
+.idea
+*.swp
+*.swo
+
+# 操作系统相关
+.DS_Store
+Thumbs.db
+
+# 日志文件
+*.log
+logs/
+
+# 文档
+README.md
+docs/
+
+# 测试相关
+tests/
+.pytest_cache/
+.coverage
+
+# Docker相关
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# 部署相关
+deploy/
+.github/
+
+# 备份文件
+backup/
+*.backup
+
+# Node.js (如果有前端)
+node_modules/
+npm-debug.log
+
+# 临时文件
+*.tmp
+*.temp
+temp/
+
+# SpecStory相关
+.specstory/
+.cursorindexingignore 
